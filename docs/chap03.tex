@@ -126,19 +126,29 @@ InferenceDiagnoser 用于在线场景。它在诊断前先调用 ContextAssemble
 
 链路检测对本文尤其重要，因为许多微服务故障并不直接表现为单机资源异常，而是体现为调用树中的等待时间放大、错误在上游链路聚集或某个关键操作的尾时延显著拉长。与指标相比，链路摘要更接近“谁在等谁、谁在失败”的因果结构，因此在 Astronomy Shop 这类追踪信息完备的系统中尤为关键。
 
-\begin{figure}[p]
+\begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.92\textwidth]{image/chap03/jaeger-trace-astronomy-shop.png}\\[0.5em]
-    {\small （a）Astronomy Shop 的典型调用链}\\[0.8em]
-    \includegraphics[width=0.92\textwidth]{image/chap03/jaeger-trace-hotel-reservation.png}\\[0.5em]
-    {\small （b）Hotel Reservation 的典型调用链}\\[0.8em]
-    \includegraphics[width=0.92\textwidth]{image/chap03/jaeger-trace-social-network.png}\\[0.5em]
-    {\small （c）Social Network 的典型调用链}
-    \caption{三个实验系统的代表性 Jaeger Trace}
-    \label{fig:jaeger-traces-three-systems}
+    \includegraphics[width=0.7\textwidth]{image/chap03/jaeger-trace-astronomy-shop.png}\\[0.3em]
+    \caption{Jaeger 追踪的 Astronomy Shop 调用链}
+    \label{fig:jaeger-traces-three-systems-1}
 \end{figure}
 
-\autoref{fig:jaeger-traces-three-systems} 进一步展示了三个系统在 Jaeger 中呈现出的差异化调用结构。Astronomy Shop 呈现出明显的前端扇出结构，适合观察时延在多级依赖间传播；Hotel Reservation 的依赖树更紧凑，利于分析请求失败如何沿前端、搜索和价格服务传导；Social Network 的写路径则具有更深的调用层级和更复杂的中间服务连接，是研究级联故障与上游暴露下游根因的重要场景。
+\autoref{fig:jaeger-traces-three-systems-1} 和 \autoref{fig:jaeger-traces-three-systems-2} 进一步展示了三个系统在 Jaeger 中呈现出的差异化调用结构。Astronomy Shop 呈现出明显的前端扇出结构，适合观察时延在多级依赖间传播；Hotel Reservation 的依赖树更紧凑，利于分析请求失败如何沿前端、搜索和价格服务传导；Social Network 的写路径则具有更深的调用层级和更复杂的中间服务连接，是研究级联故障与上游暴露下游根因的重要场景。
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}[b]{0.25\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap03/jaeger-trace-hotel-reservation.png}\\[0.3em]
+    \end{minipage}
+    \begin{minipage}[b]{0.35\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap03/jaeger-trace-social-network.png}\\[0.3em]
+    \end{minipage}
+    \vspace{0.8em}
+    \caption{Jaeger 追踪的 Hotel Reservation（左）和 Social Network（右）调用链}
+    \label{fig:jaeger-traces-three-systems-2}
+\end{figure}
 
 \subsection{基于日志的异常检测}
 
