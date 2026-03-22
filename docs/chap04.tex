@@ -1,0 +1,319 @@
+\chapter{实验与分析}
+\label{cha:experiments}
+
+\section{实验目的与研究问题}
+\label{sec:exp_goal}
+
+随着 OpsEvolver 从论文前期写作时对应的早期原型继续迭代，项目不再只保留零散日志，而是在 \texttt{opsevolver/.opsevolver/} 目录下持续积累了历史快照、知识快照、分析脚本与统计图。特别是 Astronomy Shop、Hotel Reservation 与 Social Network 三个系统，已经形成了可直接复盘的故障注入记录、告警结果、诊断摘要以及知识沉淀。因此，本章的目标不再是说明“系统是否能够运行”，而是基于真实演化数据回答以下更具体的问题。
+\begin{enumerate}
+    \item \textbf{RQ1：} 当前版本的 OpsEvolver 在三个微服务系统上累计形成了多大规模的有效实验资产？
+    \item \textbf{RQ2：} 不同故障类型在不同系统中的可观测性有何差异，哪些故障更容易进入“无告警注入”集合？
+    \item \textbf{RQ3：} 从项目保留的早期快照到当前 \texttt{v1} 快照，知识条目与规则库规模发生了怎样的增长？
+    \item \textbf{RQ4：} 当前系统的主要瓶颈位于告警触发、诊断完成，还是最终根因的严格命中？
+\end{enumerate}
+
+与初稿阶段相比，本章更强调两点。其一，所有分析都以持久化 JSON 快照为依据，而非手工摘取的个别案例；其二，分析对象不只包括成功样本，也包括未触发告警的负样本。这样的设计使得实验部分能够真正反映 OpsEvolver 的演化状态，而不是单次运行的偶然表现。
+
+\section{实验环境与对象}
+\label{sec:exp_setup}
+
+\subsection{实验软件环境}
+
+OpsEvolver 的运行环境建立在 Kubernetes 集群之上，并借助多种外部组件完成故障注入与可观测性采集。结合当前代码实现，实验软件栈主要包括如下组成部分。
+\begin{enumerate}
+    \item \textbf{容器编排环境：} Kubernetes 负责应用部署、服务发现、资源管理和命名空间隔离。
+    \item \textbf{混沌工程组件：} Chaos Mesh 负责声明式故障注入，覆盖 Pod、容器与网络等常见干扰方式。
+    \item \textbf{指标系统：} Prometheus 负责采集容器与服务指标，为告警生成和诊断动作提供基础数据。
+    \item \textbf{链路追踪系统：} Jaeger 负责提供服务调用链和跨度数据，用于定位时延传播和依赖异常。
+    \item \textbf{大模型接口：} 当前原型使用 DeepSeek 客户端驱动探索、诊断和反思类智能体。
+\end{enumerate}
+
+需要说明的是，本章并不评估某一固定硬件平台上的极限吞吐量，而是关注“在真实微服务环境中，系统能否持续生成可学习的运维样本并沉淀为结构化知识”。因此，本章结果主要体现方法有效性、工程闭环程度以及跨系统适配性，而非性能基准分数。
+
+\subsection{被测应用场景}
+
+截至 2026 年 3 月 19 日修订时读取的最新 \texttt{v1} 快照，定量分析主要覆盖三个已形成较完整演化历史的系统：Astronomy Shop、Hotel Reservation 和 Social Network。Train Ticket 虽然已接入项目，但当前尚未形成与前三者同等规模的历史快照，因此不纳入本章定量比较。
+
+\begin{table}[htbp]
+    \centering
+    \caption{本章定量分析使用的应用场景}
+    \label{tab:exp-apps}
+    \small
+    \begin{tabular}{|p{2.5cm}|p{2.8cm}|p{2.5cm}|p{2.4cm}|p{3.5cm}|}
+        \hline
+        场景名称 & 命名空间 & 工作负载方式 & 覆盖服务数（总/有效） & 场景特点 \\ \hline
+        Astronomy Shop & astronomy-shop & 应用内置负载生成 & 28 / 28 & OpenTelemetry 原生示例应用，链路信息丰富，适合分析时延传播与依赖异常 \\ \hline
+        Hotel Reservation & test-hotel-reservation & \texttt{wrk}，100 RPS，10 s & 18 / 17 & Go/gRPC 微服务系统，日志与错误率信号更显著，适合分析配置和缓存相关故障 \\ \hline
+        Social Network & test-social-network & \texttt{wrk}，10 RPS，10 s & 27 / 25 & 调用链较长，网关与中间层日志丰富，适合观察上游日志暴露下游故障的现象 \\ \hline
+    \end{tabular}
+\end{table}
+
+\subsection{实验数据来源与统计口径}
+
+本章所有定量结果均直接来源于如下两类持久化快照。
+\begin{enumerate}
+    \item \texttt{opsevolver/.opsevolver/history/<namespace>/v1.json}：保存故障注入记录、有效演化周期、告警列表和诊断摘要。
+    \item \texttt{opsevolver/.opsevolver/knowledge/<namespace>/v1.json}：保存知识条目与规则库。
+\end{enumerate}
+
+此外，Astronomy Shop 与 Social Network 还保留了较早的 \texttt{v0.1} 快照，本文据此观察系统从早期阶段到当前阶段的演化幅度。由于这些快照会随着离线工作流继续运行而增长，本章统一以 2026 年 3 月 19 日修订时读取到的最新 \texttt{v1} 文件内容为准。
+
+为避免不同统计口径混淆，本文采用如下三项核心指标。
+\begin{equation}
+    \label{eq:obs-rate}
+    \eta_{obs} = \frac{N_{eff}}{N_{inj}},
+\end{equation}
+其中，$N_{inj}$ 表示总故障注入次数，$N_{eff}$ 表示成功触发可观测告警并进入诊断流程的有效周期数，$\eta_{obs}$ 表示注入可观测有效率。
+
+\begin{equation}
+    \label{eq:finish-rate}
+    \rho_{fin} = \frac{N_{fin}}{N_{eff}},
+\end{equation}
+其中，$N_{fin}$ 表示诊断轨迹状态为 \texttt{Finished} 的周期数，$\rho_{fin}$ 表示诊断完成率。
+
+\begin{equation}
+    \label{eq:hit-rate}
+    \rho_{hit} = \frac{N_{hit}}{N_{eff}},
+\end{equation}
+其中，$N_{hit}$ 表示被 \texttt{evaluation\_success} 判定为命中注入故障的周期数，$\rho_{hit}$ 表示严格根因命中率。当前离线演化默认只启用一个主探索人格，因此每个有效周期对应一条主诊断轨迹。
+
+\section{实验规模与版本演化}
+\label{sec:exp_scale}
+
+\subsection{当前 \texttt{v1} 快照的总体规模}
+
+基于最新 \texttt{v1} 快照，三个系统的总体实验规模如\autoref{tab:v1-overview} 所示。可以看到，OpsEvolver 已累计执行 523 次故障注入，其中 365 次转化为有效演化周期，进一步产生了 502 条告警、377 条知识条目和 404 条规则。就总量而言，系统已经从一次性实验脚本演化为可持续积累运维样本的研究平台。
+
+\begin{table}[htbp]
+    \centering
+    \caption{\texttt{v1} 快照的总体实验规模}
+    \label{tab:v1-overview}
+    \small
+    \resizebox{\textwidth}{!}{
+        \begin{tabular}{|c|c|c|c|c|c|c|c|}
+            \hline
+            系统 & 总注入$N_{inj}$ & 有效周期$N_{eff}$ & 无告警$N_{no}$ & $\eta_{obs}$ & 告警数 & 知识条目 & 规则数 \\ \hline
+            Astronomy Shop & 142 & 142 & 0 & 100.0\% & 248 & 151 & 160 \\ \hline
+            Hotel Reservation & 170 & 89 & 81 & 52.4\% & 107 & 91 & 94 \\ \hline
+            Social Network & 211 & 134 & 77 & 63.5\% & 147 & 135 & 150 \\ \hline
+            合计 & 523 & 365 & 158 & 69.8\% & 502 & 377 & 404 \\ \hline
+        \end{tabular}
+    }
+\end{table}
+
+这组数据反映了三个值得强调的事实。第一，Astronomy Shop 在当前监控与负载配置下可观测性最强，所有注入都能进入有效周期。第二，Hotel Reservation 和 Social Network 中存在大量无告警注入，说明故障注入是否执行成功与故障是否具备学习价值并不等价。第三，知识条目与规则数已经接近甚至略高于有效周期数，表明系统不只是在保存原始案例，还在不断抽象跨案例规则。
+
+\subsection{从早期快照到当前快照的演化}
+
+当前仓库保留的版本对比快照主要包括 \texttt{v0.1} 与 \texttt{v1}。虽然它们并不等同于精确的源码 commit 对比，但足以反映论文前期写作阶段与当前实验阶段之间的量级变化。结果如\autoref{tab:version-evolution} 所示。
+
+\begin{table}[htbp]
+    \centering
+    \caption{早期快照与当前快照的规模对比}
+    \label{tab:version-evolution}
+    \small
+    \begin{tabular}{|c|c|c|c|c|c|c|c|}
+        \hline
+        系统 & 版本 & 总注入数 & 有效周期数 & 知识条目数 & 规则数 & 周期增长倍数 & 知识增长倍数 \\ \hline
+        Astronomy Shop & \texttt{v0.1} & 41 & 41 & 45 & 52 & -- & -- \\ \cline{2-8}
+        & \texttt{v1} & 142 & 142 & 151 & 160 & 3.46 & 3.36 \\ \hline
+        Social Network & \texttt{v0.1} & 15 & 10 & 10 & 11 & -- & -- \\ \cline{2-8}
+        & \texttt{v1} & 211 & 134 & 135 & 150 & 13.40 & 13.50 \\ \hline
+    \end{tabular}
+\end{table}
+
+从\autoref{tab:version-evolution} 可以看到，版本演化不是简单的“多跑了几次实验”，而是方法与实现共同完善后的结果。尤其是 Social Network，从早期仅 10 个有效周期增长到 134 个有效周期，说明系统已经从零散案例积累阶段进入了可稳定沉淀知识的阶段。对于论文而言，这意味着方法论讨论不再停留在概念设计，而可以直接建立在持续积累的数据资产之上。
+
+\section{故障可观测性与覆盖范围分析}
+\label{sec:coverage_analysis}
+
+\subsection{服务覆盖范围与告警密度}
+
+除了总注入次数外，更能体现系统成熟度的指标是“覆盖了多少服务”以及“每个有效周期能产生多少可分析信号”。相关统计如\autoref{tab:service-coverage-density} 所示。
+
+\begin{table}[htbp]
+    \centering
+    \caption{服务覆盖与知识沉淀密度}
+    \label{tab:service-coverage-density}
+    \small
+    \begin{tabular}{|c|c|c|c|c|c|}
+        \hline
+        系统 & 注入目标服务数 & 有效目标服务数 & 每有效周期平均告警数 & 每有效周期知识条目数 & 每有效周期规则数 \\ \hline
+        Astronomy Shop & 28 & 28 & 1.746 & 1.063 & 1.127 \\ \hline
+        Hotel Reservation & 18 & 17 & 1.202 & 1.022 & 1.056 \\ \hline
+        Social Network & 27 & 25 & 1.097 & 1.007 & 1.119 \\ \hline
+    \end{tabular}
+\end{table}
+
+从覆盖范围上看，Astronomy Shop 已经实现了对全部 28 个目标服务的有效演化覆盖；Hotel Reservation 和 Social Network 也分别覆盖了 17 个和 25 个服务，说明当前演化并非集中在极少数热点组件上。从密度上看，Astronomy Shop 每个有效周期平均产生 1.746 条告警，高于另外两个系统，这与其链路传播特征更明显、延迟型异常更容易被捕获有关。与此同时，三个系统在“每个有效周期约沉淀 1 条知识、1 条以上规则”这一点上较为接近，说明 Introspector 已经能稳定地把单轮演化转化为结构化经验。
+
+\subsection{不同故障类型的可观测有效率}
+
+将三个系统的注入记录合并后，可以得到按故障类型统计的可观测有效率，如\autoref{tab:fault-effectiveness} 所示。总体而言，PodFailure、NetworkLoss 和 ContainerKill 更容易触发有效告警，而 DeployMisconf 与 DiskWoreOut 在当前工作负载下的有效率相对较低。
+
+\begin{table}[htbp]
+    \centering
+    \caption{各类故障的可观测有效率（跨系统汇总）}
+    \label{tab:fault-effectiveness}
+    \small
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        故障类型 & 总注入次数 & 有效周期数 & 有效率 \\ \hline
+        PodFailure & 92 & 70 & 76.1\% \\ \hline
+        NetworkLoss & 80 & 58 & 72.5\% \\ \hline
+        ContainerKill & 56 & 42 & 75.0\% \\ \hline
+        PodKill & 113 & 75 & 66.4\% \\ \hline
+        NetworkDelay & 147 & 98 & 66.7\% \\ \hline
+        DeployMisconf & 32 & 21 & 65.6\% \\ \hline
+        DiskWoreOut & 3 & 1 & 33.3\% \\ \hline
+    \end{tabular}
+\end{table}
+
+这一结果表明，当前可观测栈对“实例失效类”和“链路异常类”故障更敏感。相比之下，配置失配和底层 I/O 异常往往更依赖特定业务路径与负载放大，因此不一定能在短观察窗口内稳定触发告警。DiskWoreOut 仅有 33.3\% 的有效率，正说明底层故障要转化为可学习样本，仍需要更有针对性的工作负载与监控设计。
+
+\subsection{无告警注入的分布}
+
+为了进一步理解可观测性边界，本文统计了进入 \texttt{no\_alert\_injections} 的故障类型分布，如\autoref{tab:no-alert-breakdown} 所示。Astronomy Shop 在当前快照中没有出现无告警注入，而 Hotel Reservation 与 Social Network 则分别累积了 81 条和 77 条。
+
+\begin{table}[htbp]
+    \centering
+    \caption{无告警注入的故障类型分布}
+    \label{tab:no-alert-breakdown}
+    \small
+    \begin{tabular}{|c|c|c|}
+        \hline
+        故障类型 & Hotel Reservation & Social Network \\ \hline
+        NetworkDelay & 24 & 25 \\ \hline
+        PodKill & 16 & 22 \\ \hline
+        PodFailure & 14 & 8 \\ \hline
+        NetworkLoss & 12 & 10 \\ \hline
+        ContainerKill & 7 & 7 \\ \hline
+        DeployMisconf & 7 & 4 \\ \hline
+        DiskWoreOut & 1 & 1 \\ \hline
+    \end{tabular}
+\end{table}
+
+这一分布说明两点。第一，当前阶段最容易落入不可观测区域的是 NetworkDelay 与 PodKill，而不是更复杂的配置错误。这意味着轻微或中等程度的网络退化并不总能在短时间内外显为阈值型告警。第二，无告警分布并非系统无效，而是对当前工作负载和监控阈值的一种反向刻画。正因为这些记录被持久化保存，ChaosExplorer 才能逐步学会“哪些故障组合当前不值得重复投入”。
+
+\subsection{不同系统的主导告警与故障-告警映射}
+
+虽然三个系统共用相同的故障注入集合，但它们的主导告警模式差异明显。
+\begin{enumerate}
+    \item \textbf{Astronomy Shop。} 共产生 248 条告警，其中 \texttt{HighLatency} 129 条，\texttt{ExcessiveErrorsInLogs} 119 条。最常见的映射关系是 \texttt{PodKill$\rightarrow$HighLatency}（33 次）和 \texttt{NetworkDelay$\rightarrow$HighLatency}（32 次），说明该系统对时延传播非常敏感。
+    \item \textbf{Hotel Reservation。} 共产生 107 条告警，其中 \texttt{ExcessiveErrorsInLogs} 78 条，\texttt{HighErrorRate} 29 条。最常见的映射关系是 \texttt{NetworkDelay$\rightarrow$ExcessiveErrorsInLogs} 与 \texttt{PodKill$\rightarrow$ExcessiveErrorsInLogs}（均为 18 次），说明日志是其最稳定的异常入口。
+    \item \textbf{Social Network。} 共产生 147 条告警，其中 \texttt{ExcessiveErrorsInLogs} 131 条，占绝对多数；其次为 \texttt{HighLatency} 15 条。最常见的映射关系是 \texttt{NetworkDelay$\rightarrow$ExcessiveErrorsInLogs}（43 次）和 \texttt{PodFailure$\rightarrow$ExcessiveErrorsInLogs}（35 次），说明网关与中间层日志能够持续暴露下游故障。
+\end{enumerate}
+
+这种差异意味着 OpsEvolver 学到的知识不会是“一套通用模板”，而是明显带有环境特征。Astronomy Shop 更容易积累“时延传播型”和“调用链定位型”知识；Hotel Reservation 更容易积累“日志优先”和“错误率优先”的知识；Social Network 则更强调“通过上游连接异常反推下游服务”的排障模式。
+
+\section{诊断行为与知识积累分析}
+\label{sec:ablation_analysis}
+
+\subsection{诊断完成率、严格命中率与置信度}
+
+当前版本除了保存根因文本外，还会额外保存 \texttt{Finished/Failure} 结果、\texttt{evaluation\_success} 标记、报告置信度和诊断步数。这使得我们能够把“给出了结论”和“结论是否命中真实故障”区分开来。相关统计如\autoref{tab:diagnosis-quality} 所示。
+
+\begin{table}[htbp]
+    \centering
+    \caption{诊断行为统计}
+    \label{tab:diagnosis-quality}
+    \small
+    \resizebox{\textwidth}{!}{
+        \begin{tabular}{|c|c|c|c|c|c|c|c|}
+            \hline
+            系统 & Finished & Failure & $\rho_{fin}$ & 严格命中$N_{hit}$ & $\rho_{hit}$ & 平均置信度 & 平均步骤数 \\ \hline
+            Astronomy Shop & 48 & 94 & 33.8\% & 1 & 0.7\% & 0.599 & 1.211 \\ \hline
+            Hotel Reservation & 45 & 44 & 50.6\% & 4 & 4.5\% & 0.666 & 1.191 \\ \hline
+            Social Network & 71 & 63 & 53.0\% & 6 & 4.5\% & 0.684 & 1.224 \\ \hline
+            合计 & 164 & 198 & 44.9\% & 11 & 3.0\% & 0.647 & 1.211 \\ \hline
+        \end{tabular}
+    }
+\end{table}
+
+表中最值得关注的现象是：系统已经能够较稳定地形成诊断轨迹，但严格命中率仍然偏低。换言之，当前瓶颈已经从“能不能做出一条诊断路径”逐步转向“最终结论能否准确落到真实故障类型及目标组件”。这一现象与当前实现是吻合的，因为 \texttt{evaluation\_success} 的判定标准要求诊断结果明确识别故障类型或关键目标服务，而不是只停留在“网络有问题”“依赖异常”这类笼统层面。
+
+从置信度看，Astronomy Shop 的平均置信度低于另外两个系统，这与其时延传播型故障更依赖调用链相关。相比之下，Hotel Reservation 与 Social Network 中大量异常首先表现为明确的错误日志，因此模型更容易给出较高置信度判断。另一方面，三个系统的平均步骤数都约为 1.2，说明当前探索流程偏短，很多结论是在少量观测后快速形成的，这既提升了执行效率，也限制了复杂案例中的证据完备性。
+
+\subsection{知识条目与规则库的累计效果}
+
+截至当前快照，三个系统分别积累了 151、91 和 135 条知识条目，以及 160、94 和 150 条规则。规则库规模整体略高于知识条目规模，说明 Introspector 并非只保存单个案例，而是在持续把多个案例抽象为通用提示。结合\autoref{tab:service-coverage-density} 可知，系统已经能够稳定保持“每个有效周期平均产生 1 条以上规则”的沉淀速度。
+
+这正是本文双系统方法论的工程化体现。知识条目对应具体经验样本，适合检索式复用；规则库对应跨案例归纳，适合在在线诊断中压缩搜索空间。当二者同时增长时，OpsEvolver 的学习就不再依赖模型隐式记忆，而是转化为可检查、可编辑、可追溯的外部知识资产。
+
+\subsection{当前瓶颈的重新定位}
+
+若结合\autoref{tab:v1-overview} 与\autoref{tab:diagnosis-quality} 共同观察，可以发现当前瓶颈已出现明显转移。在 Astronomy Shop 中，可观测有效率已经达到 100.0\%，但严格命中率只有 0.7\%；在 Hotel Reservation 和 Social Network 中，可观测性问题依然存在，但即使进入有效周期，严格命中率也只有 4.5\% 和 4.5\%。这说明当前系统的主要难点不再是单一问题，而是两个阶段性问题并存。
+\begin{enumerate}
+    \item \textbf{阶段一：} 在部分系统中，仍需通过更合适的负载与告警阈值把更多故障转化为可观测样本。
+    \item \textbf{阶段二：} 对已经可观测的样本，仍需提升诊断结论对故障类型与目标服务的精确落点能力。
+\end{enumerate}
+
+从研究角度看，这一结论非常重要。它意味着 OpsEvolver 已经不再停留在“完全不可用”的原型状态，而是进入了能够被进一步分解、定位和优化的阶段。系统知道自己在哪些地方看不见，也知道自己在哪些地方虽然看见了，但还没有真正说对。
+
+\section{方法论改进的实验含义}
+\label{sec:method_implications}
+
+基于上述数据，可以把当前版本相较于论文前期原型的改进概括为以下三点。
+\begin{enumerate}
+    \item \textbf{从单次实验到可持续积累。} 历史库与知识库的引入使故障注入、告警、轨迹、知识和规则能够被统一持久化，实验结果不再是一次性输出，而成为可继续复用的数据资产。
+    \item \textbf{从正样本学习到边界学习。} \texttt{no\_alert\_injections} 让系统开始显式学习不可观测区域，这使主动学习不只积累成功经验，也逐步形成探索边界。
+    \item \textbf{从回答生成到严格评估。} \texttt{evaluation\_success} 和 \texttt{evaluation\_reason} 的加入，使实验分析能够区分“有结论”与“结论对题”两种不同层次的能力，从而更准确地暴露系统短板。
+\end{enumerate}
+
+这些改进意味着，OpsEvolver 当前已经不仅仅是“让 LLM 去做一次故障诊断”，而是在构建一个面向特定环境、可持续积累知识并能对自身失败进行分类的研究平台。第四章的所有统计结果，本质上都建立在这一平台化演进之上。
+
+\section{典型案例分析}
+\label{sec:case_study}
+
+为进一步说明最新快照中已经沉淀出的知识类型，本文选取三个代表性系统进行案例分析，如\autoref{tab:case-study} 所示。
+
+\begin{table}[htbp]
+    \centering
+    \caption{代表性实验案例}
+    \label{tab:case-study}
+    \small
+    \begin{tabular}{|p{2.4cm}|p{2.0cm}|p{2.7cm}|p{3.4cm}|p{3.5cm}|}
+        \hline
+        场景 & 故障类型 & 主要告警信号 & 关键诊断证据 & 反馈与知识沉淀 \\ \hline
+        Astronomy Shop & NetworkDelay / PodKill & HighLatency 为主，伴随部分错误日志 & 调用方高时延而被调方自身延迟正常；高时延往往先出现在 frontend、checkout、accounting 等调用链上游 & 沉淀出“高时延不一定发生在故障服务自身，应沿调用链逆向排查”的知识模式 \\ \hline
+        Hotel Reservation & NetworkDelay / PodKill & ExcessiveErrorsInLogs 与 HighErrorRate & 前端或 Consul 相关日志先出现 \texttt{deadline exceeded}、\texttt{dial tcp}、\texttt{CheckAvailability failed} 等错误 & 强化“日志优先”“配置与网络优先核查”的规则，减少只看资源指标的误判 \\ \hline
+        Social Network & PodFailure / NetworkDelay / NetworkLoss & nginx-thrift 上的 ExcessiveErrorsInLogs & nginx-thrift 日志中的 \texttt{timed out}、\texttt{Connection refused}、\texttt{TTransportException} 能指向 compose-post、social-graph、post-storage 等下游服务 & 形成“由上游连接异常反推下游故障链”的高价值经验条目 \\ \hline
+    \end{tabular}
+\end{table}
+
+\subsection{Astronomy Shop：时延传播型故障}
+
+Astronomy Shop 中最典型的模式是：对 payment、shipping、currency、quote、checkout 等依赖服务注入 \texttt{NetworkDelay} 或 \texttt{PodKill} 后，首先出现显著症状的往往不是被注入服务本身，而是其调用方或前端链路。例如，知识快照中已经出现多条“\texttt{HighLatencyInCallers \&\& NormalLatencyInCallee}”类型条目，明确提示当 frontend 或 checkout 的 P95 时延显著上升而被调服务自身指标正常时，应优先检查网络连通性或下游 Pod 健康，而不是只盯着告警最显著的服务。
+
+这一案例的重要意义在于，它说明 OpsEvolver 已经能够从多轮演化中学到分布式系统中的非局部因果关系。高时延并不一定出现在故障点上，真正的根因可能隐藏在链路下游、甚至表现为“被调服务看似正常但网络路径异常”。这类知识对在线诊断的价值显然高于单纯记录“某服务高时延”的表层现象。
+
+\subsection{Hotel Reservation：日志主导型异常暴露}
+
+Hotel Reservation 的一个突出特征是，\texttt{ExcessiveErrorsInLogs} 在 107 条告警中占到 78 条。知识快照中已经反复出现以 \texttt{deadline exceeded}、\texttt{rpc error}、\texttt{dial tcp} 和 \texttt{CheckAvailability failed} 为核心症状的条目，这些条目普遍指向一种模式：前端或 Consul 相关日志首先暴露依赖问题，而资源指标和链路时延未必是最先失真的信号。
+
+这种现象说明，对于 Hotel Reservation 而言，“先看日志文本，再反推依赖关系”通常比“先看资源指标”更有效。更具体地说，当 frontend 日志提示 \texttt{CheckAvailability failed}、Consul 相关报错提示 \texttt{deadline exceeded} 时，根因往往不在前端本身，而在 memcached、MongoDB、服务发现或网络路径相关组件上。OpsEvolver 正是在这种反复演练中逐渐形成了对该系统更合适的排障优先级。
+
+\subsection{Social Network：由上游日志反推下游故障}
+
+Social Network 的知识快照最能体现系统对“级联故障”的学习能力。大量知识条目都围绕 nginx-thrift 日志展开，例如 \texttt{socket read timed out}、\texttt{Connection refused}、\texttt{TTransportException} 和 \texttt{Server closed the connection} 等错误。这些日志表面上出现在网关或中间层，但实际根因通常位于 compose-post-service、social-graph-service、post-storage-service、media-frontend 等更深层依赖组件。
+
+这类案例的重要价值在于，它反映了真实微服务系统中常见的“症状在上游，故障在下游”现象。当前快照中的知识条目已经不再只给出“检查 nginx-thrift”这种表层建议，而是进一步提示沿 compose-post 及其依赖继续向下游追查。这表明系统已经开始把单次故障经验抽象为具有迁移价值的诊断策略。
+
+\section{局限性分析}
+\label{sec:limitations}
+
+尽管最新快照显著丰富了实验资产，但从当前数据和实现来看，仍存在以下局限。
+\begin{enumerate}
+    \item \textbf{严格命中率仍然偏低。} 当前总严格命中率仅为 3.0\%，说明系统已能生成诊断轨迹，但在故障类型命名和目标组件落点上仍需进一步提升。
+    \item \textbf{可观测性受负载与阈值影响明显。} Hotel Reservation 和 Social Network 分别存在 81 次和 77 次无告警注入，说明当前负载模式与采样窗口尚不足以稳定放大所有故障。
+    \item \textbf{探索并行性尚未充分释放。} 虽然系统定义了多种探索人格，但当前默认只启用一种主人格，尚未系统验证多路径并行与投票机制的收益。
+    \item \textbf{知识检索机制仍较轻量。} 当前在线检索主要依赖关键词匹配和规则拼装，尚未引入更强的向量检索、图结构依赖或因果排序能力。
+    \item \textbf{底层与组合故障覆盖仍有限。} DiskWoreOut 与部分配置失配类故障的有效率较低，说明系统对更隐蔽、更长链路故障的观测与诊断仍需增强。
+\end{enumerate}
+
+这些局限并不削弱当前原型的研究价值，反而说明 OpsEvolver 已经进入一个“能够用自身数据暴露下一步优化重点”的阶段。与纯概念验证不同，当前版本的短板已经能够被定量识别，这本身就是系统成熟度提升的重要信号。
+
+\section{本章小结}
+\label{sec:chap04_summary}
+
+本章基于 \texttt{.opsevolver} 目录下截至 2026 年 3 月 19 日修订时读取的最新实验快照，对 OpsEvolver 在 Astronomy Shop、Hotel Reservation 和 Social Network 三个系统上的表现进行了数据驱动分析。结果表明：当前系统已累计形成 523 次故障注入、365 个有效周期、502 条告警、377 条知识条目和 404 条规则；Astronomy Shop 的可观测性最强，而 Hotel Reservation 与 Social Network 中仍存在较大无告警区域；版本迭代显著提升了知识与规则积累规模；当前最主要的改进方向已从“能否跑通流程”转向“如何提升严格根因命中能力”。整体而言，OpsEvolver 已经从概念原型演进为一个可持续积累、可量化分析、可暴露自身边界的实验平台。

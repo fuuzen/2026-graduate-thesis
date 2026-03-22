@@ -1,0 +1,28 @@
+%%
+% 摘要信息
+% 本文档中前缀"c-"代表中文版字段, 前缀"e-"代表英文版字段
+% 摘要内容应概括地反映出本论文的主要内容，主要说明本论文的研究目的、内容、方法、成果和结论。要突出本论文的创造性成果或新见解，不要与引言相 混淆。语言力求精练、准确，以 300—500 字为宜。
+% 在摘要的下方另起一行，注明本文的关键词（3—5 个）。关键词是供检索用的主题词条，应采用能覆盖论文主要内容的通用技术词条(参照相应的技术术语 标准)。按词条的外延层次排列（外延大的排在前面）。摘要与关键词应在同一页。
+% modifier: 黄俊杰(huangjj27, 349373001dc@gmail.com)
+% update date: 2017-04-15
+%%
+
+\cabstract{
+    随着云原生技术和微服务架构的普及，现代 IT 系统的复杂性与动态性显著增加，导致传统运维（Ops）面临巨大挑战。站点可靠性工程（SRE）通过将软件工程原则应用于运维实践，旨在提升系统可靠性，但其高度依赖人工分析和经验，难以适应快速变化的云环境。近年来，人工智能运维（AIOps）应运而生，试图利用机器学习和大数据技术自动化运维任务。然而，多数 AIOps 方案侧重于孤立的问题解决，难以实现端到端的自主决策和持续学习。
+
+    为解决上述挑战，本文提出并实现了一个名为 OpsEvolver 的多智能体自主演化 SRE 框架。该框架融合了大语言模型（LLM）的强大推理能力与混沌工程的实践，并以主动学习、探索/利用分离和双系统认知为方法论基础。通过离线演化与在线诊断的紧密结合，OpsEvolver 能够主动探索未知故障空间，并通过自适应反馈环实现知识的持续学习和迭代。框架中的智能体扮演不同角色：探索智能体（ChaosExplorer）负责智能地注入故障以模拟真实场景；诊断智能体（Diagnoser）运用“计划-行动-观察-反思”循环模式，对告警进行根因分析；反思智能体（Introspector）则从诊断经验中提取结构化知识。此外，我们引入了 DeepThinker 模块对诊断失败进行深度分析，根据失败类型调整知识库或触发新的离线演化，从而实现系统知识的自我修复与性能跃迁。
+
+    基于截至 2026 年 3 月 19 日修订时读取的最新实验快照，OpsEvolver 已在 Astronomy Shop、Hotel Reservation 和 Social Network 三个微服务系统上累计执行 523 次故障注入，其中 365 次触发了可观测告警并进入诊断流程，进一步沉淀出 377 条知识条目和 404 条规则。实验分析表明，该框架能够在真实微服务环境中组织完整的“演练-诊断-反思-沉淀”闭环，并显式学习可观测边界：一方面，系统能够稳定积累环境特定知识；另一方面，也能通过无告警注入记录识别当前负载和监控条件下尚未形成有效样本的故障区域。本文所实现的原型系统为构建具备高度自主性、深度理解力且能够自我迭代的下一代智能运维系统提供了可行路径。
+}
+% 中文关键词(每个关键词之间用“，”分开,最后一个关键词不打标点符号。)
+\ckeywords{智能运维，大语言模型，智能体，站点可靠性工程，混沌工程，自适应}
+
+\eabstract{
+    With the proliferation of cloud-native technologies and microservice architectures, the complexity and dynamism of modern IT systems have significantly increased, posing immense challenges to traditional operations (Ops). Site Reliability Engineering (SRE) applies software engineering principles to operations to enhance system reliability, yet its heavy reliance on manual analysis and human experience struggles to adapt to rapidly evolving cloud environments. In recent years, Artificial Intelligence for IT Operations (AIOps) has emerged, seeking to automate operational tasks using machine learning and big data technologies. However, most AIOps solutions focus on isolated problem-solving, making it difficult to achieve end-to-end autonomous decision-making and continuous learning.
+
+    To address these challenges, this thesis proposes and implements OpsEvolver, a multi-agent self-evolving SRE framework. The framework is grounded in active learning, explore-exploit separation, and a dual-process cognition view that combines externalized experience with runtime reasoning. Through a tight coupling of offline evolution and online diagnosis, OpsEvolver can actively explore unknown fault spaces and achieve continuous knowledge learning and iteration via an adaptive feedback loop. Agents within the framework play distinct roles: the ChaosExplorer intelligently injects faults to simulate real-world scenarios; the Diagnoser utilizes a "Plan-Act-Observe-Reflect" cycle for root cause analysis of alerts; and the Introspector extracts structured knowledge from diagnostic experiences. Furthermore, we introduce the DeepThinker module for in-depth analysis of diagnostic failures, adjusting the knowledge base or triggering new offline evolution cycles based on failure types, thereby enabling self-correction and performance enhancement of the system's knowledge.
+
+    Based on the latest snapshots read during revision on March 19, 2026, the current system has accumulated 523 fault injections across Astronomy Shop, Hotel Reservation, and Social Network, of which 365 triggered observable alerts and entered the diagnosis loop, yielding 377 knowledge items and 404 rules. Experimental analysis shows that the OpsEvolver framework can organize a complete loop of rehearsal, diagnosis, reflection, and knowledge accumulation in microservice environments, while also learning observability boundaries through no-alert injections. This prototype provides a feasible path toward the next generation of autonomous, intelligent, and self-iterating SRE systems.
+}
+% 英文文关键词(每个关键词之间用,分开, 最后一个关键词不打标点符号。)
+\ekeywords{AIOps, Large Language Model, Agent, Site Reliability Engineering, Chaos Engineering, Self-Adaptive}
