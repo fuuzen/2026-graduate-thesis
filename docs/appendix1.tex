@@ -1,32 +1,116 @@
-\chapter{补充更多细节}
+\chapter{补充实验图表}
 
-\section{补充图}
+本附录收录第四章正文未展开讨论的补充图表，主要包括 Llama 4 Maverick 17B Instruct 与 Qwen3-32B 的分模型统计图，以及三种模型在知识抽取阶段的补充可视化结果。这些图表与正文采用同一批实验数据，作用是为读者提供更细粒度的对照材料。
 
-\subsection{补充图}
+\section{分模型诊断与可观测性补充图}
 
-这是附录内容，应该用宋体小四号字体。
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.95\textwidth]{image/chap04/llama/diagnosis_results.png}\\[0.5em]
+    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
+    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/diagnosis_results.png}\\[0.5em]
+    {\small （b）Qwen3-32B}
+    \caption{两种补充模型的诊断结果与置信度分布}
+    \label{fig:appendix-model-diagnosis-results}
+\end{figure}
 
-\begin{figure}[h!]
-	\centering
-	\makebox[0.16\textwidth]{\scriptsize 图像}
-	\makebox[0.16\textwidth]{\scriptsize 真值}
-	\makebox[0.16\textwidth]{\scriptsize Grid-5LSTM1}
-	\makebox[0.16\textwidth]{\scriptsize Grid-5LSTM3}
-	\makebox[0.16\textwidth]{\scriptsize Grid-5LSTM5} \\
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.95\textwidth]{image/chap04/llama/no_alert_analysis.png}\\[0.5em]
+    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
+    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/no_alert_analysis.png}\\[0.5em]
+    {\small （b）Qwen3-32B}
+    \caption{两种补充模型的有效周期与无告警样本分析}
+    \label{fig:appendix-model-no-alert}
+\end{figure}
 
-	\color[rgb]{0.9,0.9,0.9}\bfseries
-	\begin{tabular}{*{7}{>{\centering\arraybackslash}p{0.10\textwidth}}}
-		\hline
-		\cellcolor[rgb]{0,0,0}  背景                 & \cellcolor[rgb]{0.5020,0,0} 飞机         & \cellcolor[rgb]{0,0.5020,0} 自行车 & \cellcolor[rgb]{0.5020,0.5020,0} 鸟 & \cellcolor[rgb]{0,0,0.5020} 船        & \cellcolor[rgb]{0.5020,0,0.5020} 瓶子 & \cellcolor[rgb]{0,0.5020,0.5020} 大巴
-		\\
-		\hline
-		\cellcolor[rgb]{0.5020,0.5020,0.5020} 汽车   & \cellcolor[rgb]{0.2510,0,0} 猫           & \cellcolor[rgb]{0.7529,0,0} 椅子   & \cellcolor[rgb]{0.2510,0.5020,0} 牛 & \cellcolor[rgb]{0.7529,0.5020,0} 桌子 & \cellcolor[rgb]{0.2510,0,0.5020} 狗   & \cellcolor[rgb]{0.7529,0,0.5020} 马   \\
-		\hline
-		\cellcolor[rgb]{0.2510,0.5020,0.5020} 摩托车 & \cellcolor[rgb]{0.7529,0.5020,0.5020} 人 & \cellcolor[rgb]{0,0.2510,0} 盆栽   & \cellcolor[rgb]{0.5020,0.2510,0} 羊 & \cellcolor[rgb]{0,0.7529,0} 沙发      & \cellcolor[rgb]{0.5020,0.7529,0} 火车 & \cellcolor[rgb]{0,0.2510,0.5020} 电视 \\
-		\hline
-	\end{tabular}
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.95\textwidth]{image/chap04/llama/fault_distribution.png}\\[0.5em]
+    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
+    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/fault_distribution.png}\\[0.5em]
+    {\small （b）Qwen3-32B}
+    \caption{两种补充模型的故障类型分布}
+    \label{fig:appendix-model-fault-distribution}
+\end{figure}
 
-	\caption{一个配有彩色表格的插图}
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.95\textwidth]{image/chap04/llama/fault_alert_graph.png}\\[0.5em]
+    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
+    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/fault_alert_graph.png}\\[0.5em]
+    {\small （b）Qwen3-32B}
+    \caption{两种补充模型的故障到告警关系图}
+    \label{fig:appendix-model-fault-alert-graph}
+\end{figure}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.95\textwidth]{image/chap04/llama/fault_service_heatmap.png}\\[0.5em]
+    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
+    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/fault_service_heatmap.png}\\[0.5em]
+    {\small （b）Qwen3-32B}
+    \caption{两种补充模型的服务覆盖热力图}
+    \label{fig:appendix-model-service-heatmap}
+\end{figure}
+
+\clearpage
+\section{知识演化补充图}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.95\textwidth]{image/chap04/llama/knowledge_timeline_kb.png}\\[0.5em]
+    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
+    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/knowledge_timeline_kb.png}\\[0.5em]
+    {\small （b）Qwen3-32B}
+    \caption{两种补充模型的知识条目累计增长曲线}
+    \label{fig:appendix-model-kb-timeline}
+\end{figure}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.95\textwidth]{image/chap04/llama/knowledge_deepdive_rules.png}\\[0.5em]
+    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
+    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/knowledge_deepdive_rules.png}\\[0.5em]
+    {\small （b）Qwen3-32B}
+    \caption{两种补充模型的规则提取与服务覆盖关系}
+    \label{fig:appendix-model-rule-deepdive}
+\end{figure}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.95\textwidth]{image/chap04/dpsk/knowledge_timeline_confidence.png}\\[0.5em]
+    {\small （a）DeepSeek-V3.2}\\[0.8em]
+    \includegraphics[width=0.95\textwidth]{image/chap04/llama/knowledge_timeline_confidence.png}\\[0.5em]
+    {\small （b）Llama 4 Maverick 17B Instruct}\\[0.8em]
+    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/knowledge_timeline_confidence.png}\\[0.5em]
+    {\small （c）Qwen3-32B}
+    \caption{三种模型的诊断置信度时间线}
+    \label{fig:appendix-model-confidence-timeline}
+\end{figure}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.95\textwidth]{image/chap04/dpsk/knowledge_deepdive_boxplot.png}\\[0.5em]
+    {\small （a）DeepSeek-V3.2}\\[0.8em]
+    \includegraphics[width=0.95\textwidth]{image/chap04/llama/knowledge_deepdive_boxplot.png}\\[0.5em]
+    {\small （b）Llama 4 Maverick 17B Instruct}\\[0.8em]
+    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/knowledge_deepdive_boxplot.png}\\[0.5em]
+    {\small （c）Qwen3-32B}
+    \caption{三种模型的知识项置信度箱线图}
+    \label{fig:appendix-model-confidence-boxplot}
+\end{figure}
+
+\begin{figure}[p]
+    \centering
+    \includegraphics[width=0.95\textwidth]{image/chap04/dpsk/knowledge_deepdive_iteration.png}\\[0.5em]
+    {\small （a）DeepSeek-V3.2}\\[0.8em]
+    \includegraphics[width=0.95\textwidth]{image/chap04/llama/knowledge_deepdive_iteration.png}\\[0.5em]
+    {\small （b）Llama 4 Maverick 17B Instruct}\\[0.8em]
+    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/knowledge_deepdive_iteration.png}\\[0.5em]
+    {\small （c）Qwen3-32B}
+    \caption{三种模型的知识项置信度随条目累积的变化}
+    \label{fig:appendix-model-confidence-iteration}
 \end{figure}
 
 \endinput
