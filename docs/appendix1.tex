@@ -1,116 +1,138 @@
-\chapter{补充实验图表}
+\chapter{补充实验环境与图表}
 
-本附录收录第四章正文未展开讨论的补充图表，主要包括 Llama 4 Maverick 17B Instruct 与 Qwen3-32B 的分模型统计图，以及三种模型在知识抽取阶段的补充可视化结果。这些图表与正文采用同一批实验数据，作用是为读者提供更细粒度的对照材料。
+本附录补充正文未展开的实验平台信息与统计图表。前一部分集中说明实验环境，包括所依赖的 Kubernetes 集群、网络与存储插件、节点系统环境以及宿主机资源配置；后一部分收录第四章正文未逐一讨论的补充图表，以便读者从更细粒度的角度观察不同基底模型下的演化结果。
+
+\section{实验环境}
+
+论文中的离线演化实验和基准评测均运行在一套四节点 Kubernetes 集群上，其中包含 1 个控制平面节点和 3 个工作节点。集群使用 Kubeadm 搭建，版本为 v1.33.9。所有节点均运行 Ubuntu 24.04.4 LTS，容器运行时为 Docker 29.3.0，并通过 cri-dockerd 接入 Kubernetes。节点之间使用内网地址通信，不配置外部暴露地址，便于在受控环境下持续开展故障注入与重复实验。
+
+从网络侧看，集群使用 Flannel v0.27.4 作为 CNI 插件，对应 DaemonSet 部署在 kube-flannel 命名空间中，节点后端模式为 VXLAN，各节点分别分配独立的 Pod 网段。集群部署了 OpenEBS 本地卷组件作为 CSI 插件，提供 openebs-hostpath 与 openebs-device 两个存储类。实验中需要持久化的微服务应用均使用 OpenEBS Local PV 进行存储，且未额外注册独立的 CSI Driver 对象。为了支持故障注入，集群中还部署了 Chaos Mesh v2.8.1，以 DaemonSet 形式运行在 chaos-testing 命名空间中，提供针对 Pod、容器和网络层面的声明式故障注入能力。最后，为了支持指标采集与监控，集群中部署了 Prometheus Node Exporter、Prometheus Operator 等组件。
+
+\begin{table}[htbp]
+    \centering
+    \caption{各节点的系统与宿主机资源配置}
+    \label{tab:appendix-node-hardware}
+    \small
+    \begin{tabular}{|>{\centering\arraybackslash}m{1.2cm}|>{\centering\arraybackslash}m{1.8cm}|>{\centering\arraybackslash}m{4.6cm}|>{\centering\arraybackslash}m{1.5cm}|>{\centering\arraybackslash}m{1.5cm}|>{\centering\arraybackslash}m{1.7cm}|}
+        \hline
+        \textbf{节点} & \textbf{角色} & \textbf{CPU} & \textbf{内存} & \textbf{系统盘} & \textbf{内核} \\ \hline
+        lsy-1 & 控制平面 & Xeon Cascadelake，4 vCPU & 7.8\,GiB & 80\,GB & 6.8.0-41 \\ \hline
+        lsy-2 & 工作节点 & Xeon Cascadelake，4 vCPU & 7.8\,GiB & 80\,GB & 6.8.0-41 \\ \hline
+        lsy-3 & 工作节点 & Xeon Cascadelake，4 vCPU & 7.8\,GiB & 80\,GB & 6.8.0-41 \\ \hline
+        lsy-4 & 工作节点 & Xeon Cascadelake，4 vCPU & 7.8\,GiB & 80\,GB & 6.8.0-106 \\ \hline
+    \end{tabular}
+\end{table}
 
 \section{分模型诊断与可观测性补充图}
 
-\begin{figure} [htbp]
+\begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{image/chap04/llama/diagnosis_results.png}\\[0.5em]
-    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
-    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/diagnosis_results.png}\\[0.5em]
-    {\small （b）Qwen3-32B}
-    \caption{两种补充模型的诊断结果与置信度分布}
-    \label{fig:appendix-model-diagnosis-results}
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/llama/diagnosis_results.png}\\[0.3em]
+        {\tiny （a）Llama 4 Maverick：诊断结果与置信度}
+    \end{minipage}\hfill
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/qwen/diagnosis_results.png}\\[0.3em]
+        {\tiny （b）Qwen3-32B：诊断结果与置信度}
+    \end{minipage}\\[0.8em]
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/llama/no_alert_analysis.png}\\[0.3em]
+        {\tiny （c）Llama 4 Maverick：有效周期与无告警样本}
+    \end{minipage}\hfill
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/qwen/no_alert_analysis.png}\\[0.3em]
+        {\tiny （d）Qwen3-32B：有效周期与无告警样本}
+    \end{minipage}
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/llama/fault_distribution.png}\\[0.3em]
+        {\tiny （e）Llama 4 Maverick：故障类型分布}
+    \end{minipage}\hfill
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/qwen/fault_distribution.png}\\[0.3em]
+        {\tiny （f）Qwen3-32B：故障类型分布}
+    \end{minipage}\\[0.8em]
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/llama/fault_alert_graph.png}\\[0.3em]
+        {\tiny （g）Llama 4 Maverick：故障到告警关系}
+    \end{minipage}\hfill
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/qwen/fault_alert_graph.png}\\[0.3em]
+        {\tiny （h）Qwen3-32B：故障到告警关系}
+    \end{minipage}
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/llama/fault_service_heatmap.png}\\[0.3em]
+        {\tiny （i）Llama 4 Maverick 服务覆盖热力图}
+    \end{minipage}\hfill
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/qwen/fault_service_heatmap.png}\\[0.3em]
+        {\tiny （j）Qwen3-32B 服务覆盖热力图}
+    \end{minipage}
 \end{figure}
 
-\begin{figure} [htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{image/chap04/llama/no_alert_analysis.png}\\[0.5em]
-    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
-    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/no_alert_analysis.png}\\[0.5em]
-    {\small （b）Qwen3-32B}
-    \caption{两种补充模型的有效周期与无告警样本分析}
-    \label{fig:appendix-model-no-alert}
-\end{figure}
-
-\begin{figure} [htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{image/chap04/llama/fault_distribution.png}\\[0.5em]
-    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
-    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/fault_distribution.png}\\[0.5em]
-    {\small （b）Qwen3-32B}
-    \caption{两种补充模型的故障类型分布}
-    \label{fig:appendix-model-fault-distribution}
-\end{figure}
-
-\begin{figure} [htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{image/chap04/llama/fault_alert_graph.png}\\[0.5em]
-    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
-    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/fault_alert_graph.png}\\[0.5em]
-    {\small （b）Qwen3-32B}
-    \caption{两种补充模型的故障到告警关系图}
-    \label{fig:appendix-model-fault-alert-graph}
-\end{figure}
-
-\begin{figure} [htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{image/chap04/llama/fault_service_heatmap.png}\\[0.5em]
-    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
-    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/fault_service_heatmap.png}\\[0.5em]
-    {\small （b）Qwen3-32B}
-    \caption{两种补充模型的服务覆盖热力图}
-    \label{fig:appendix-model-service-heatmap}
-\end{figure}
-
-\clearpage
 \section{知识演化补充图}
 
-\begin{figure} [htbp]
+\begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{image/chap04/llama/knowledge_timeline_kb.png}\\[0.5em]
-    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
-    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/knowledge_timeline_kb.png}\\[0.5em]
-    {\small （b）Qwen3-32B}
-    \caption{两种补充模型的知识条目累计增长曲线}
-    \label{fig:appendix-model-kb-timeline}
-\end{figure}
-
-\begin{figure} [htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{image/chap04/llama/knowledge_deepdive_rules.png}\\[0.5em]
-    {\small （a）Llama 4 Maverick 17B Instruct}\\[0.8em]
-    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/knowledge_deepdive_rules.png}\\[0.5em]
-    {\small （b）Qwen3-32B}
-    \caption{两种补充模型的规则提取与服务覆盖关系}
-    \label{fig:appendix-model-rule-deepdive}
-\end{figure}
-
-\begin{figure} [htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{image/chap04/dpsk/knowledge_timeline_confidence.png}\\[0.5em]
-    {\small （a）DeepSeek-V3.2}\\[0.8em]
-    \includegraphics[width=0.95\textwidth]{image/chap04/llama/knowledge_timeline_confidence.png}\\[0.5em]
-    {\small （b）Llama 4 Maverick 17B Instruct}\\[0.8em]
-    \includegraphics[width=0.95\textwidth]{image/chap04/qwen/knowledge_timeline_confidence.png}\\[0.5em]
-    {\small （c）Qwen3-32B}
-    \caption{三种模型的诊断置信度时间线}
-    \label{fig:appendix-model-confidence-timeline}
-\end{figure}
-
-\begin{figure} [htbp]
-    \centering
-    \includegraphics[width=0.55\textwidth]{image/chap04/dpsk/knowledge_deepdive_boxplot.png}\\[0.5em]
-    {\small （a）DeepSeek-V3.2}\\[0.8em]
-    \includegraphics[width=0.55\textwidth]{image/chap04/llama/knowledge_deepdive_boxplot.png}\\[0.5em]
-    {\small （b）Llama 4 Maverick 17B Instruct}\\[0.8em]
-    \includegraphics[width=0.55\textwidth]{image/chap04/qwen/knowledge_deepdive_boxplot.png}\\[0.5em]
-    {\small （c）Qwen3-32B}
-    \caption{三种模型的知识项置信度箱线图}
-    \label{fig:appendix-model-confidence-boxplot}
-\end{figure}
-
-\begin{figure} [htbp]
-    \centering
-    \includegraphics[width=0.55\textwidth]{image/chap04/dpsk/knowledge_deepdive_iteration.png}\\[0.5em]
-    {\small （a）DeepSeek-V3.2}\\[0.8em]
-    \includegraphics[width=0.55\textwidth]{image/chap04/llama/knowledge_deepdive_iteration.png}\\[0.5em]
-    {\small （b）Llama 4 Maverick 17B Instruct}\\[0.8em]
-    \includegraphics[width=0.55\textwidth]{image/chap04/qwen/knowledge_deepdive_iteration.png}\\[0.5em]
-    {\small （c）Qwen3-32B}
-    \caption{三种模型的知识项置信度随条目累积的变化}
-    \label{fig:appendix-model-confidence-iteration}
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/llama/knowledge_timeline_kb.png}\\[0.3em]
+        {\tiny （a）Llama 4 Maverick：知识条目累计增长}
+    \end{minipage}\hfill
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/qwen/knowledge_timeline_kb.png}\\[0.3em]
+        {\tiny （b）Qwen3-32B：知识条目累计增长}
+    \end{minipage}\\[0.8em]
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/llama/knowledge_deepdive_rules.png}\\[0.3em]
+        {\tiny （c）Llama 4 Maverick：规则提取与服务覆盖}
+    \end{minipage}\hfill
+    \begin{minipage}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/qwen/knowledge_deepdive_rules.png}\\[0.3em]
+        {\tiny （d）Qwen3-32B：规则提取与服务覆盖}
+    \end{minipage}
+    \begin{minipage}[b]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/dpsk/knowledge_timeline_confidence.png}\\[0.3em]
+        {\tiny （e）DeepSeek-V3.2 诊断置信度时间线}
+    \end{minipage}\hfill
+    \begin{minipage}[b]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/llama/knowledge_timeline_confidence.png}\\[0.3em]
+        {\tiny （f）Llama 4 Maverick 诊断置信度时间线}
+    \end{minipage}\hfill
+    \begin{minipage}[b]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/qwen/knowledge_timeline_confidence.png}\\[0.3em]
+        {\tiny （g）Qwen3-32B 诊断置信度时间线}
+    \end{minipage}
+    \begin{minipage}[b]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/dpsk/knowledge_deepdive_boxplot.png}\\[0.3em]
+        {\tiny （h）DeepSeek-V3.2 知识项置信度箱线图}
+    \end{minipage}\hfill
+    \begin{minipage}[b]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/llama/knowledge_deepdive_boxplot.png}\\[0.3em]
+        {\tiny （i）Llama 4 Maverick 知识项置信度箱线图}
+    \end{minipage}\hfill
+    \begin{minipage}[b]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{image/chap04/qwen/knowledge_deepdive_boxplot.png}\\[0.3em]
+        {\tiny （j）Qwen3-32B 知识项置信度箱线图}
+    \end{minipage}
 \end{figure}
 
 \endinput
