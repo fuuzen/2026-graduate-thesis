@@ -30,16 +30,18 @@ ChaosExplorer 是负责故障注入的智能体，也是整个系统的核心。
     \caption{OpsEvolver 原型支持的故障动作}
     \label{tab:fault-actions}
     \small
-    \begin{tabular}{|>{\centering\arraybackslash}m{2.3cm}|>{\centering\arraybackslash}m{1.6cm}|>{\centering\arraybackslash}m{3.1cm}|>{\centering\arraybackslash}m{5.2cm}|}
-        \hline
-        故障动作 & 注入层次 & 关键参数 & 说明 \\ \hline
-        ContainerKill & 容器级 & 微服务名、容器名列表 & 使用 Chaos Mesh 杀死指定容器，用于模拟容器崩溃或异常退出 \\ \hline
-        PodKill & Pod 级 & 微服务列表、持续时间 & 直接终止目标 Pod，考察编排系统的恢复与上游重试能力 \\ \hline
-        PodFailure & Pod 级 & 微服务列表、持续时间 & 让目标 Pod 在一段时间内不可用，用于模拟实例失效 \\ \hline
-        NetworkDelay & 网络级 & 微服务列表、延迟、抖动、持续时间 & 通过声明式网络扰动注入链路时延和抖动 \\ \hline
-        NetworkLoss & 网络级 & 微服务列表、持续时间 & 注入高比例网络丢包，观察重试和超时行为 \\ \hline
-        DeployMisconf & 配置级 & 微服务列表、目标配置项、目标值 & 通过受控修改部署配置模拟资源限制、环境变量等配置失配 \\ \hline
-        DiskWoreOut & 内核/宿主机级 & 进程名列表 & 通过内核级故障注入返回 I/O 错误，模拟磁盘故障 \\ \hline
+    \begin{tabular}{>{\centering\arraybackslash}m{2.3cm}>{\centering\arraybackslash}m{1.6cm}>{\centering\arraybackslash}m{3.1cm}>{\centering\arraybackslash}m{5.2cm}}
+        \toprule
+        故障动作 & 注入层次 & 关键参数 & 说明 \\
+        \midrule
+        ContainerKill & 容器级 & 微服务名、容器名列表 & 使用 Chaos Mesh 杀死指定容器，用于模拟容器崩溃或异常退出 \\
+        PodKill & Pod 级 & 微服务列表、持续时间 & 直接终止目标 Pod，考察编排系统的恢复与上游重试能力 \\
+        PodFailure & Pod 级 & 微服务列表、持续时间 & 让目标 Pod 在一段时间内不可用，用于模拟实例失效 \\
+        NetworkDelay & 网络级 & 微服务列表、延迟、抖动、持续时间 & 通过声明式网络扰动注入链路时延和抖动 \\
+        NetworkLoss & 网络级 & 微服务列表、持续时间 & 注入高比例网络丢包，观察重试和超时行为 \\
+        DeployMisconf & 配置级 & 微服务列表、目标配置项、目标值 & 通过受控修改部署配置模拟资源限制、环境变量等配置失配 \\
+        DiskWoreOut & 内核/宿主机级 & 进程名列表 & 通过内核级故障注入返回 I/O 错误，模拟磁盘故障 \\
+        \bottomrule
     \end{tabular}
 \end{table}
 
